@@ -1,0 +1,193 @@
+#include<iostream>
+using namespace std;
+int temp_x, temp_y;
+
+void checkerboardprint(char a[][20]) {     //绘制棋盘（包括行列的号码）
+	for (int i = 0; i <= 20; i++) {
+		printf("%3d",i);
+	}
+	cout << endl;
+	for (int i = 0; i < 20; i++) {
+		printf("%3d",i+1);                 //数字和字符统一大小，对齐输出
+		for (int j = 0; j < 20; j++) {
+			cout << "  " << a[i][j];
+		}
+		cout << endl;
+	}
+	return;
+}
+
+bool winorlose(char a[][20], int x, int y)        //简单判断输赢（六子连起来）
+{
+
+	int count = 0;                                //六子为赢，循环六次
+	int winflag = 1;                              //记录连续几颗棋子相连
+	char cur;
+	int i, j;
+	cur = a[x - 1][y - 1];
+	for (i = x - 2, j = y-1; i >= 0 && count++ < 6; i--)    //竖向判断
+	{
+		if (a[i][j] == cur)
+			winflag++;
+		else
+			break;
+	}
+	count = 0;
+	for (i = x, j = y-1; i < 20 && count++ < 6; i++)
+	{
+		if (a[i][j] == cur)
+			winflag++;
+		else
+			break;
+	}
+	count = 0;
+	if (winflag >= 6)
+		return true;
+	else
+		winflag = 1;
+	for (i = x-1, j = y ; j < 20 && count++ < 6; j++)     //横向判断
+	{
+		if (a[i][j] == cur)
+			winflag++;
+		else
+			break;
+	}
+	count = 0;
+	for (i = x-1, j = y - 2; j >= 0 && count++ < 6; j--)
+	{
+		if (a[i][j] == cur)
+			winflag++;
+		else
+			break;
+	}
+	count = 0;
+	if (winflag >= 6)
+		return true;
+	else
+		winflag = 1;
+	for (i = x , j = y ; i < 20 && j < 20 && count++ < 6; i++, j++)   //左斜方向判断
+	{
+		if (a[i][j] == cur)
+			winflag++;
+		else
+			break;
+	}
+	count = 0;
+	for (i = x - 2, j = y - 2; i >= 0 && j >= 0 && count++ < 6; i--, j--)
+	{
+		if (a[i][j] == cur)
+			winflag++;
+		else
+			break;
+	}
+	count = 0;
+	if (winflag >= 6)
+		return true;
+	else
+		winflag = 1;
+	for (i = x - 2, j = y ; i >= 0 && j < 20 && count++ < 6; i--, j++)   //右斜方向判断
+	{
+		if (a[i][j] == cur)
+			winflag++;
+		else
+			break;
+	}
+	count = 0;
+	for (i = x , j = y - 2; i < 20 && y >= 0 && count++ < 6; i++, j--)
+	{
+		if (a[i][j] == cur)
+			winflag++;
+		else
+			break;
+	}
+	count = 0;
+	if (winflag >= 6)
+		return true;
+	else
+		winflag = 1;
+	return false;
+}
+void regret(char a[][20], int x, int y) {                  //执行悔棋操作
+	a[x - 1][y - 1] = '#';                                 //上一步棋重置
+	checkerboardprint(a);                                  //打印棋盘
+	cout << "玩家请重新落子";
+}
+void gamepage() {
+	cout << " ___________________________________" << endl;    //游戏开始界面
+	cout << "|             欢乐六子棋            |" << endl;
+	cout << " ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+	cout << "|游戏操作指南：                     |" << endl;
+	cout << "|     ①输入0代表黑子，输入1代表白字|" << endl;
+	cout << "|     ②输入-1代表悔棋              |" << endl;
+	cout << " -----------------------------------" << endl;
+	cout << "***********请选择游戏模式************：" << endl;
+	cout << endl;
+	cout << "       |1、玩家对战(有禁手)|" << endl;
+	cout << "       |2、玩家对战(无禁手)|" << endl;
+	cout << "       |3、人机对战(有禁手)|" << endl;
+	cout << "       |4、人机对战(无禁手)|" << endl;
+}
+void umplayergame(char a[][20]) {
+	int xx, yy, ccolour, ttemp(0);
+	checkerboardprint(a);
+	cout << "玩家1请落子";
+	cin >> ccolour >> xx >> yy;
+	while (xx <= 0 || yy <= 0 || xx > 20 || yy > 20) {
+		cout << "输入错误，请重新输入";
+		cin >> xx >> yy;
+	}
+	if (ccolour == 0) a[xx - 1][yy - 1] = '@';
+	else a[xx - 1][yy - 1] = 'o';
+	while (!winorlose(a, xx, yy)) {            //没有赢则循环输入
+		checkerboardprint(a);
+		if (ttemp == 0) {
+			cout << "玩家2请落子";
+			ttemp = 1;
+		}
+		else {
+			cout << "玩家1请落子";
+			ttemp = 0;
+		}
+		while (cin >> ccolour) {              //悔棋
+			if (ccolour == -1) {
+				regret(a, xx, yy);
+				ttemp = (ttemp == 1) ? 0 : 1;
+				continue;
+			}
+			else {
+				cin >> xx >> yy;
+				break;
+			}
+		}
+		while (xx <= 0 || yy <= 0 || xx > 20 || yy > 20) {
+			cout << "输入错误，请重新输入";
+			cin >> xx >> yy;
+		}
+		if (ccolour == 0) {
+			a[xx - 1][yy - 1] = '@';
+		}
+		else a[xx - 1][yy - 1] = 'o';
+	}     
+	if (a[xx - 1][yy - 1] == '@')  cout << "恭喜玩家1获胜！！！";    //输出输赢结果
+	else  cout << "恭喜玩家2获胜！！！";
+}
+nt main() {
+	char a[20][20];
+	int node;
+	for (int i = 0; i < 20; i++) {                //重置棋盘
+		for (int j = 0; j < 20; j++) {
+			a[i][j] = '#';
+		}
+	}
+	gamepage();
+	cin >> node;
+	if (node == 1)                                 //玩家对战(有禁手)
+		playergame(a);
+	else if (node == 3)                                //人机对战(有禁手)
+		computergame(a);
+	else if (node == 2)                                 //玩家对战(无禁手)
+		umplayergame(a);
+	else if (node == 4)                                    //人机对战(无禁手)
+		umcomputergame(a);
+	return 0;
+}
