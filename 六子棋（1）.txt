@@ -1,4 +1,6 @@
-#include<iostream>
+#include<Windows.h>
+#include<stdio.h>
+
 using namespace std;
 int temp_x, temp_y;
 
@@ -107,11 +109,334 @@ bool winorlose(char a[][20], int x, int y)        //简单判断输赢（六子�
 		winflag = 1;
 	return false;
 }
-void regret(char a[][20], int x, int y) {                  //执行悔棋操作
-	a[x - 1][y - 1] = '#';                                 //上一步棋重置
+
+bool score0(char a[][20], int x, int y,int sum)        //判断落子加分
+{
+	int count = 0;                                //循环次数
+	int winflag = 1;                              //记录连续几颗棋子相连
+	char cur;
+	int i, j;
+	cur = a[x][y];
+	for (i = x - 1, j = y ; i >= 0 && count++ < sum; i--)    //竖向判断
+	{
+		if (a[i][j] == cur)
+			winflag++;
+		else
+			break;
+	}
+	count = 0;
+	for (i = x + 1, j = y ; i < 20 && count++ < sum; i++)
+	{
+		if (a[i][j] == cur)
+			winflag++;
+		else
+			break;
+	}
+	count = 0;
+	if (winflag >= sum)
+		return true;
+	else
+		winflag = 1;
+	for (i = x , j = y + 1; j < 20 && count++ < sum; j++)     //横向判断
+	{
+		if (a[i][j] == cur)
+			winflag++;
+		else
+			break;
+	}
+	count = 0;
+	for (i = x , j = y - 1; j >= 0 && count++ < sum; j--)
+	{
+		if (a[i][j] == cur)
+			winflag++;
+		else
+			break;
+	}
+	count = 0;
+	if (winflag >= sum)
+		return true;
+	else
+		winflag = 1;
+	for (i = x + 1, j = y + 1; i < 20 && j < 20 && count++ < sum; i++, j++)   //左斜方向判断
+	{
+		if (a[i][j] == cur)
+			winflag++;
+		else
+			break;
+	}
+	count = 0;
+	for (i = x - 1, j = y - 1; i >= 0 && j >= 0 && count++ < sum; i--, j--)
+	{
+		if (a[i][j] == cur)
+			winflag++;
+		else
+			break;
+	}
+	count = 0;
+	if (winflag >= sum)
+		return true;
+	else
+		winflag = 1;
+	for (i = x - 1, j = y + 1; i >= 0 && j < 20 && count++ < sum; i--, j++)   //右斜方向判断
+	{
+		if (a[i][j] == cur)
+			winflag++;
+		else
+			break;
+	}
+	count = 0;
+	for (i = x + 1, j = y - 1; i < 20 && j >= 0 && count++ < sum; i++, j--)
+	{
+		if (a[i][j] == cur)
+			winflag++;
+		else
+			break;
+	}
+	count = 0;
+	if (winflag >= sum)
+		return true;
+	else
+		winflag = 1;
+	return false;
+}
+
+bool nohands(char a[][20], int x, int y) {             //判断禁手的情况
+	int count = 0;                                     //禁手最少四子相连，循环四次
+	int num(0);                                        //记录几个方向出现四子及以上相连   
+	int winflag = 1;                                   //记录连续棋子相连个数
+	char cur;
+	int i, j;
+	cur = '@';
+	for (i = x - 2, j = y - 1; i >= 0 && count++ < 4; i--)   //竖向判断
+	{
+		if (a[i][j] == cur)
+			winflag++;
+		else
+			break;
+	}
+	count = 0;
+	for (i = x, j = y - 1; i < 20 && count++ < 4; i++)
+	{
+		if (a[i][j] == cur)
+			winflag++;
+		else
+			break;
+	}
+	count = 0;
+	if (winflag >= 4 && winflag <= 5) {
+		num++;                                    //出现则次数加一
+		winflag = 1;
+	}
+		
+	else
+		winflag = 1;
+	for (i = x - 1, j = y; j < 20 && count++ < 4; j++)    //横向判断
+	{
+		if (a[i][j] == cur)
+			winflag++;
+		else
+			break;
+	}
+	count = 0;
+	for (i = x - 1, j = y - 2; j >= 0 && count++ < 4; j--)
+	{
+		if (a[i][j] == cur)
+			winflag++;
+		else
+			break;
+	}
+	count = 0;
+	if (winflag >= 4 && winflag <= 5) {
+		num++;
+		winflag = 1;
+	}
+	else
+		winflag = 1;
+	for (i = x, j = y; i < 20 && j < 20 && count++ < 4; i++, j++)
+	{
+		if (a[i][j] == cur)
+			winflag++;
+		else
+			break;
+	}
+	count = 0;
+	for (i = x - 2, j = y - 2; i >= 0 && j >= 0 && count++ < 4; i--, j--)  //左斜判断
+	{
+		if (a[i][j] == cur)
+			winflag++;
+		else
+			break;
+	}
+	count = 0;
+	if (winflag >= 4 && winflag <= 5) {
+		num++;
+		winflag = 1;
+	}
+	else
+		winflag = 1; 
+	for (i = x - 2, j = y; i >= 0 && j < 20 && count++ < 4; i--, j++)   //右斜判断
+	{
+		if (a[i][j] == cur)
+			winflag++;
+		else
+			break;
+	}
+	count = 0;
+	for (i = x, j = y - 2; i < 20 && j >= 0 && count++ < 4; i++, j--)  
+	{
+		if (a[i][j] == cur)
+			winflag++;
+		else
+			break;
+	}
+	count = 0;
+	if (winflag >= 4 && winflag <= 5) {
+		num++;
+		winflag = 1;
+	}
+	else
+		winflag = 1;
+	if (num >= 2) return false;      //出现最少两个方向禁手，则返回白子胜利
+	else return true;
+}
+
+void regret(char a[][20], int xxx, int yyy) {                  //执行悔棋操作
+	a[xxx - 1][yyy - 1] = '#';                                 //上一步棋重置
 	checkerboardprint(a);                                  //打印棋盘
 	cout << "玩家请重新落子";
 }
+
+bool computer(char a[][20]) {          //人机对战的计算机选择落子算法
+	//对每一个点运用各种情况占不同分值进行累加，选择最高分点落子
+		
+	//电脑即将“禁手”：
+	//有五子相连 200             只有四子相连 30 
+	
+	//电脑连续三子 30            玩家连续三子 10
+	//电脑连续两子 2             玩家连续两子 2
+	//周围有棋子 1
+	int score[20][20];
+	for (int x = 0; x < 20; x++) {
+		for (int y = 0; y < 20; y++) {
+			score[x][y] = 0;
+		}
+	}
+	Sleep(1000);
+	int d;	
+	for (int x = 0; x < 20; x++) {
+		for (int y = 0; y < 20; y++) {
+			if (a[x][y] == '@' || a[x][y] == 'o') continue;
+			a[x][y] = 'o';
+			d = 6;
+			if (score0(a, x, y, d)) {       //电脑连续六子
+				a[x][y] = 'o';
+				temp_x = x;
+				temp_y = y;
+				if (winorlose(a, x + 1, y + 1)) {
+					checkerboardprint(a);
+					return true;
+				}
+				else return false;
+			}
+			a[x][y] = '@';
+			if (score0(a, x, y, d)) {       //玩家连续六子
+				a[x][y] = 'o';
+				temp_x = x;
+				temp_y = y;
+				if (winorlose(a, x + 1, y + 1)) {
+					checkerboardprint(a);
+					return true;
+				}
+				else return false;
+			}
+			a[x][y] = '#';
+		}
+	}
+	for (int x = 0; x < 20; x++) {
+		for (int y = 0; y < 20; y++) {
+			if (a[x][y] == '@' || a[x][y] == 'o') continue;
+			a[x][y] = 'o';
+			d = 5;
+			if (score0(a, x, y, d)) {       //电脑连续五子
+				a[x][y] = 'o';
+				temp_x = x;
+				temp_y = y;
+				if (winorlose(a, x + 1, y + 1)) {
+					checkerboardprint(a);
+					return true;
+				}
+				else return false;
+			}
+			a[x][y] = '@';
+			if (score0(a, x, y, d)) {       //玩家连续五子
+				a[x][y] = 'o';
+				temp_x = x;
+				temp_y = y;
+				if (winorlose(a, x + 1, y + 1)) {
+					checkerboardprint(a);
+					return true;
+				}
+				else return false;
+			}
+			a[x][y] = '#';
+		}
+	}
+	for (int x = 0; x < 20; x++) {
+		for (int y = 0; y < 20; y++) {
+			if (a[x][y] == '@' || a[x][y] == 'o') continue;
+			a[x][y] = '@';
+			d = 4;
+			if (score0(a, x, y, d))         //玩家连续四子
+				score[x][y] += 10;
+			d = 3;
+			if (score0(a, x, y, d))         //玩家连续三子
+				score[x][y] += 2;
+			if (a[x - 1][y + 1] == '@' || a[x - 1][y - 1] == 'o' || a[x + 1][y + 1] == '@' || a[x + 1][y - 1] == 'o' || a[x][y - 1] == '@' || a[x][y - 1] == 'o' || a[x][y + 1] == '@' || a[x][y + 1] == 'o' || a[x - 1][y] == '@' || a[x - 1][y] == 'o' || a[x + 1][y] == '@' || a[x + 1][y] == 'o' || a[x][y - 1] == '@' || a[x][y - 1] == 'o' || a[x][y + 1] == '@' || a[x][y + 1] == 'o')
+				score[x][y]++;
+			a[x][y] = 'o';
+			d = 4;
+			if (score0(a, x, y, d))
+				score[x][y] += 30;     //电脑连续四子
+			d = 3;
+			if (score0(a, x, y, d))
+				score[x][y] += 2;      //电脑连续三子
+			if (!nohands(a, x, y))
+				score[x][y] += 30;    //电脑形成“禁手”
+			a[x][y] = '#';
+		}
+	}
+	temp_x = 0;
+	temp_y = 0;
+	for (int i = 0; i < 20; i++) {
+		for (int j = 0; j < 20; j++) {
+			if (score[temp_x][temp_y] < score[i][j]) {
+				temp_x = i;
+				temp_y = j;
+			}
+		}
+	}
+	a[temp_x][temp_y] = 'o';
+	if (winorlose(a, temp_x+1, temp_y+1)) {
+	    checkerboardprint(a);
+		return true;
+	}
+	else return false;
+}   
+
+void regret2(char a[][20]) {
+	a[temp_x][temp_y] = '#';
+	return;
+}
+
+bool heqi(char a[][20]) {
+	for (int i = 0; i < 20; i++) {
+		for (int j = 0; j < 20; j++) {
+			if (a[i][j] == '#') return false;
+		}
+	}
+	return true;
+}
+
 void gamepage() {
 	cout << " ___________________________________" << endl;    //游戏开始界面
 	cout << "|             欢乐六子棋            |" << endl;
@@ -127,51 +452,188 @@ void gamepage() {
 	cout << "       |3、人机对战(有禁手)|" << endl;
 	cout << "       |4、人机对战(无禁手)|" << endl;
 }
-void umplayergame(char a[][20]) {
-	int xx, yy, ccolour, ttemp(0);
+
+void playergame(char a[][20]) {
+	int x, y, temp(1),xxx,yyy;
 	checkerboardprint(a);
 	cout << "玩家1请落子";
-	cin >> ccolour >> xx >> yy;
-	while (xx <= 0 || yy <= 0 || xx > 20 || yy > 20) {
+	cin >> x >> y;
+	while (x <= 0 || y <= 0 || x > 20 || y > 20) {
 		cout << "输入错误，请重新输入";
-		cin >> xx >> yy;
+		cin >> x >> y;
 	}
-	if (ccolour == 0) a[xx - 1][yy - 1] = '@';
-	else a[xx - 1][yy - 1] = 'o';
-	while (!winorlose(a, xx, yy)) {            //没有赢则循环输入
+	a[x - 1][y - 1] = '@';
+	xxx = x;
+	yyy = y;
+	temp = 0;
+	while (!winorlose(a, x, y)) {            //没有赢则循环输入
 		checkerboardprint(a);
-		if (ttemp == 0) {
+		if (temp == 0) {
 			cout << "玩家2请落子";
-			ttemp = 1;
+			temp = 1;
 		}
 		else {
 			cout << "玩家1请落子";
-			ttemp = 0;
+			temp = 0;
 		}
-		while (cin >> ccolour) {              //悔棋
-			if (ccolour == -1) {
-				regret(a, xx, yy);
-				ttemp = (ttemp == 1) ? 0 : 1;
-				continue;
+		cin >> x >> y;
+              //悔棋
+			if (x == -1) {
+				regret(a, xxx, yyy);
+				temp = (temp == 1) ? 0 : 1;
+                cin >> x >>  y;
 			}
-			else {
-				cin >> xx >> yy;
-				break;
-			}
-		}
-		while (xx <= 0 || yy <= 0 || xx > 20 || yy > 20) {
+		while (x != -1 && x <= 0 || y <= 0 || x > 20 || y > 20) {
 			cout << "输入错误，请重新输入";
-			cin >> xx >> yy;
+			cin >> x >> y;
 		}
-		if (ccolour == 0) {
-			a[xx - 1][yy - 1] = '@';
+		xxx = x;
+		yyy = y;
+		if (temp == 0) {
+			a[x - 1][y - 1] = '@';
+			if (!nohands(a, x, y)) break;    //黑子下棋后，判断禁手
 		}
-		else a[xx - 1][yy - 1] = 'o';
-	}     
-	if (a[xx - 1][yy - 1] == '@')  cout << "恭喜玩家1获胜！！！";    //输出输赢结果
+		else a[x - 1][y - 1] = 'o';
+		if (heqi(a)) break;
+	}
+	if (heqi(a)) cout << "和棋";
+	else if (!nohands(a, x, y) && !winorlose(a, x, y)) cout << "恭喜玩家2获胜！！！";    //输出输赢结果
+	else if (a[x - 1][y - 1] == '@')  cout << "恭喜玩家1获胜！！！";
 	else  cout << "恭喜玩家2获胜！！！";
 }
-nt main() {
+
+void umplayergame(char a[][20]) {
+	int x, y, temp(1), addd(0), xxx, yyy;
+	checkerboardprint(a);
+	cout << "玩家1请落子";
+	cin >> x >> y;
+	while (x <= 0 || y <= 0 || x > 20 || y > 20) {
+		cout << "输入错误，请重新输入";
+		cin >> x >> y;
+	}
+	a[x - 1][y - 1] = '@';
+	xxx = x;
+	yyy = y;
+	temp = 0;
+	while (!winorlose(a, x, y)) {            //没有赢则循环输入
+		checkerboardprint(a);
+		if (temp == 0) {
+			cout << "玩家2请落子";
+			temp = 1;
+		}
+		else {
+			cout << "玩家1请落子";
+			temp = 0;
+		}
+		cin >> x >> y;
+		//悔棋
+		if (x == -1) {
+			regret(a, xxx, yyy);
+			temp = (temp == 1) ? 0 : 1;
+			cin >> x >> y;
+		}
+		while (x != -1 && x <= 0 || y <= 0 || x > 20 || y > 20) {
+			cout << "输入错误，请重新输入";
+			cin >> x >> y;
+		}
+		xxx = x;
+		yyy = y;
+		if (temp == 0) {
+			a[x - 1][y - 1] = '@';
+		}
+		else a[x - 1][y - 1] = 'o';
+		if (heqi(a)) break;
+	}
+	if (heqi(a)) cout << "和棋";
+	else if (a[x - 1][y - 1] == '@')  cout << "恭喜玩家1获胜！！！";    //输出输赢结果
+	else  cout << "恭喜玩家2获胜！！！";
+}
+
+void computergame(char a[][20]) {
+	int t_x, t_y, temp(0), e_x, e_y;
+	checkerboardprint(a);
+	cout << "玩家请落子";
+	cin >> t_x >> t_y;
+	while (t_x <= 0 || t_y <= 0 || t_x > 20 || t_y > 20) {
+		cout << "输入错误，请重新输入";
+		cin >> t_x >> t_y;
+	}
+	e_x = t_x;
+	e_y = t_y;
+	a[t_x - 1][t_y - 1] = '@';
+	while (1) {                              //循环输入
+		if (winorlose(a, t_x, t_y)) break;
+		if (!nohands(a, t_x, t_y)) break;    //黑子下棋后，判断禁手
+		if (computer(a)) break;
+		checkerboardprint(a);
+		cout << "玩家请落子" << endl;
+		cin >> t_x >> t_y;
+		if (t_x == -1) {
+			regret2(a);
+			a[e_x - 1][e_y - 1] = '#';
+			checkerboardprint(a);
+			cout << "玩家请重新落子";
+			cin >> t_x >> t_y;
+		}	
+		while (t_x != -1 && t_x <= 0 || t_y <= 0 || t_x > 20 || t_y > 20) {
+			cout << "输入错误，请重新输入";
+			cin >> t_x >> t_y;
+		}
+		a[t_x - 1][t_y - 1] = '@';
+		e_x = t_x;
+		e_y = t_y;
+		if (heqi(a)) break;
+	}
+	if (heqi(a)) cout << "和棋";
+	else if (!nohands(a, t_x, t_y) && !winorlose(a, t_x, t_y)) cout << "恭喜电脑获胜！！！";    //输出输赢结果
+	else if (computer(a))  cout << "恭喜电脑获胜！！！";
+	else  cout << "恭喜玩家获胜！！！";
+}
+
+void umcomputergame(char a[][20]) {
+	int tx, ty, temp(0), ex, ey;
+	checkerboardprint(a);
+	cout << "玩家请落子";
+	cin >> tx >> ty;
+	while (tx <= 0 || ty <= 0 || tx > 20 || ty > 20) {
+		cout << "输入错误，请重新输入";
+		cin >> tx >> ty;
+	}
+	ex = tx;
+	ey = ty;
+	a[tx - 1][ty - 1] = '@';
+	while (1) {                              //循环输入
+		if (winorlose(a, tx, ty)) break;
+		if (computer(a)) break;
+		checkerboardprint(a);
+		cout << "玩家请落子" << endl;
+		cin >> tx >> ty;
+		if (tx == -1) {
+			regret2(a);
+			a[ex - 1][ey - 1] = '#';
+			checkerboardprint(a);
+			cout << "玩家请重新落子";
+			cin >> tx >> ty;
+		}	
+		while (tx != -1 && tx <= 0 || ty <= 0 || tx > 20 || ty > 20) {
+			cout << "输入错误，请重新输入";
+			cin >> tx >> ty;
+		}
+		a[tx - 1][ty - 1] = '@';
+		ex = tx;
+		ey = ty;
+		if (heqi(a)) break;
+	}
+	if (heqi(a)) cout << "和棋";
+	else if (winorlose(a, tx, ty)) cout << "恭喜玩家获胜！！！";    //输出输赢结果
+	else  cout << "恭喜电脑获胜！！！";
+}
+
+
+
+
+int main() {
+
 	char a[20][20];
 	int node;
 	for (int i = 0; i < 20; i++) {                //重置棋盘
