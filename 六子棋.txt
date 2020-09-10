@@ -1,0 +1,412 @@
+bool GameModel::nohands(int row,int col){
+    int count = 0;                                     //禁手最少四子相连，循环四次
+        int num(0);
+        int numm(0);//记录几个方向出现四子及以上相连
+        int winflag = 1;                                   //记录连续棋子相连个数
+        int i, j;
+        int cur;
+        cur=1;
+        for (i = row-1, j = col; i > 0 && count++ < 5; i--)   //竖向判断
+        {
+            if (gameMapVec[i][j] == cur)
+                winflag++;
+            else
+                break;
+        }
+        count = 0;
+        for (i = row+1, j = col; i <= 21 && count++ < 5; i++)
+        {
+            if (gameMapVec[i][j] == cur)
+                winflag++;
+            else
+                break;
+        }
+        count = 0;
+        if (winflag == 4 ) {
+            num++;                                    //出现则次数加一
+            winflag = 1;
+        }
+        else if(winflag==5){
+            numm++;
+            winflag=1;
+        }
+
+        else
+            winflag = 1;
+        for (i = row, j = col+1; j <= 21 && count++ < 5; j++)    //横向判断
+        {
+            if (gameMapVec[i][j] == cur)
+                winflag++;
+            else
+                break;
+        }
+        count = 0;
+        for (i = row, j = col-1; j > 0 && count++ < 5; j--)
+        {
+            if (gameMapVec[i][j] == cur)
+                winflag++;
+            else
+                break;
+        }
+        count = 0;
+        if (winflag ==4) {
+            num++;
+            winflag = 1;
+        }
+        else if(winflag==5){
+            numm++;
+            winflag=1;
+        }
+        else
+            winflag = 1;
+        for (i = row+1, j = col+1; i <= 21 && j <= 21 && count++ < 5; i++, j++)
+        {
+            if (gameMapVec[i][j] == cur)
+                winflag++;
+            else
+                break;
+        }
+        count = 0;
+        for (i = row-1, j = col-1; i > 0 && j > 0 && count++ < 5; i--, j--)  //左斜判断
+        {
+            if (gameMapVec[i][j] == cur)
+                winflag++;
+            else
+                break;
+        }
+        count = 0;
+        if (winflag ==4) {
+            num++;
+            winflag = 1;
+        }
+        else if(winflag==5) {
+            numm++;
+            winflag=1;
+        }
+        else
+            winflag = 1;
+        for (i = row-1, j = col+1; i > 0 && j <= 21 && count++ < 5; i--, j++)   //右斜判断
+        {
+            if (gameMapVec[i][j] == cur)
+                winflag++;
+            else
+                break;
+        }
+        count = 0;
+        for (i = row+1, j = col-1; i <= 21 && j > 0 && count++ < 5; i++, j--)
+        {
+            if (gameMapVec[i][j] == cur)
+                winflag++;
+            else
+                break;
+        }
+        count = 0;
+        if (winflag ==4) {
+            num++;
+            winflag = 1;
+        }
+        else if(winflag==5){
+            numm++;
+            winflag=1;
+        }
+        else
+            winflag = 1;
+        if (num >= 2||numm>=2) return true;      //出现最少两个方向禁手，则返回白子胜利
+        else return false;
+}
+
+void GameModel::AI(int &clickRow, int &clickCol)
+
+{
+    // 计算评分
+    computer();
+    // 从评分中找出最大分数的位置
+    int maxScore = 0;
+    std::vector<std::pair<int, int>> maxPoints;
+    for (int row = 1; row < 21; row++)
+        for (int col = 1; col < 21; col++)
+        {
+            // 前提是这个坐标是空的
+            if (gameMapVec[row][col] == 0)
+            {
+                if (scoreMapVec[row][col] > maxScore)          // 找最大的数和坐标
+                {
+                    maxPoints.clear();
+                    maxScore = scoreMapVec[row][col];
+                    maxPoints.push_back(std::make_pair(row, col));
+                }
+                else if (scoreMapVec[row][col] == maxScore)     // 如果有多个最大的数，都存起来
+                    maxPoints.push_back(std::make_pair(row, col));
+            }
+        }
+    // 随机落子，如果有多个点的话
+    srand((unsigned)time(0));
+    int index = rand() % maxPoints.size();
+    std::pair<int, int> pointPair = maxPoints.at(index);
+    clickRow = pointPair.first; // 记录落子点
+    clickCol = pointPair.second;
+    updataGameMap(clickRow, clickCol);
+}
+
+void GameModel::computer(){
+       int personNum = 0; // 玩家连成子的个数
+       int botNum = 0; // AI连成子的个数
+       int emptyNum = 0; // 各方向空白位的个数
+       // 清空评分
+       scoreMapVec.clear();
+       for (int i = 0; i < 21; i++)
+       {
+           std::vector<int> lineScores;
+           for (int j = 0; j < 21; j++)
+               lineScores.push_back(0);
+           scoreMapVec.push_back(lineScores);
+       }
+       //积分机制
+       //玩家
+       //两颗 4  死三 20  活三 30  死四 45  活四  95  五颗 8000
+       //电脑
+       //一颗 1  两颗 5  死三 15  活三 40  死四 50  活四 90  五颗 10000
+       // 计分（此处是完全遍历）
+       for (int row = 0; row < 21; row++)
+           for (int col = 0; col < 21;col++)
+           {
+               // 空白点就算
+               if (row > 0 && col > 0 &&
+                   gameMapVec[row][col] == 0)
+               {
+                   // 遍历周围八个方向
+                   for (int y = -1; y <= 1; y++)
+                       for (int x = -1; x <= 1; x++)
+                       {
+                           // 重置
+                           personNum = 0;
+                           botNum = 0;
+                           emptyNum = 0;
+
+                           // 原坐标不算
+                           if (y != 0 || x != 0)
+                           {
+                               // 每个方向延伸5个子
+
+                               // 对玩家白子评分（正反两个方向）
+                               for (int i = 1; i <= 5; i++)
+                               {
+                                   if (row + i * y > 0 && row + i * y < 21&&
+                                       col + i * x > 0 && col + i * x < 21 &&
+                                       gameMapVec[row + i * y][col + i * x] == 1) // 玩家的子
+                                   {
+                                       personNum++;
+                                   }
+                                   else if (row + i * y > 0 && row + i * y <21 &&
+                                            col + i * x > 0 && col + i * x < 21 &&
+                                            gameMapVec[row + i * y][col + i * x] == 0) // 空白位
+                                   {
+                                       emptyNum++;
+                                       break;
+                                   }
+                                   else            // 出边界
+                                       break;
+                               }
+                               for (int i = 1; i <= 5; i++)
+                               {
+                                   if (row - i * y > 0 && row - i * y < 21 &&
+                                       col - i * x > 0 && col - i * x < 21&&
+                                       gameMapVec[row - i * y][col - i * x] == 1) // 玩家的子
+                                   {
+                                       personNum++;
+                                   }
+                                   else if (row - i * y > 0 && row - i * y < 21 &&
+                                            col - i * x > 0 && col - i * x < 21 &&
+                                            gameMapVec[row - i * y][col - i * x] == 0) // 空白位
+                                   {
+                                       emptyNum++;
+                                       break;
+                                   }
+                                   else            // 出边界
+                                       break;
+                               }
+                               if (personNum == 2)                      // 杀三
+                                   scoreMapVec[row][col] += 4;
+                               else if (personNum == 3)                // 杀四
+                               {
+                                   if (emptyNum == 1)
+                                       scoreMapVec[row][col] += 20;
+                                   else if (emptyNum == 2)
+                                       scoreMapVec[row][col] += 30;
+                               }
+                               else if (personNum == 4)                 // 杀五
+                               {
+                                   // 量变空位不一样，优先级不一样
+                                   if (emptyNum == 1)
+                                       scoreMapVec[row][col] += 45;
+                                   else if (emptyNum == 2)
+                                       scoreMapVec[row][col] += 95;
+                               }
+                               else if (personNum == 5)                 // 杀六
+                                   scoreMapVec[row][col] += 8000;
+                               // 进行一次清空
+                               emptyNum = 0;
+                               // 对AI黑子评分
+                               for (int i = 1; i <= 5; i++)
+                               {
+                                   if (row + i * y > 0 && row + i * y < 21 &&
+                                       col + i * x > 0 && col + i * x < 21 &&
+                                       gameMapVec[row + i * y][col + i * x] == 1) // 玩家的子
+                                   {
+                                       botNum++;
+                                   }
+                                   else if (row + i * y > 0 && row + i * y <21 &&
+                                            col + i * x > 0 && col + i * x < 21 &&
+                                            gameMapVec[row +i * y][col + i * x] == 0) // 空白位
+                                   {
+                                       emptyNum++;
+                                       break;
+                                   }
+                                   else            // 出边界
+                                       break;
+                               }
+                               for (int i = 1; i <= 5; i++)
+                               {
+                                   if (row - i * y > 0 && row - i * y < 21 &&
+                                       col - i * x > 0 && col - i * x < 21 &&
+                                       gameMapVec[row - i * y][col - i * x] == -1) // AI的子
+                                   {
+                                       botNum++;
+                                   }
+                                   else if (row - i * y > 0 && row - i * y < 21 &&
+                                            col - i * x > 0 && col - i * x < 21&&
+                                            gameMapVec[row - i * y][col - i * x] == 0) // 空白位
+                                   {
+                                       emptyNum++;
+                                       break;
+                                   }
+                                   else            // 出边界
+                                       break;
+                               }
+                               if (botNum == 1)                      // 普通下子
+                                   scoreMapVec[row][col] += 1;
+                               else if (botNum == 2)                 // 二
+                                   scoreMapVec[row][col] += 5;
+                               else if (botNum == 3)
+                               {
+                                   if (emptyNum == 1)                // 死三
+                                       scoreMapVec[row][col] += 15;
+                                   else if (emptyNum == 2)
+                                       scoreMapVec[row][col] += 40;  // 活三
+                               }
+                               else if (botNum == 4)
+                               {
+                                   if (emptyNum == 1)                // 死四
+                                       scoreMapVec[row][col] += 50;
+                                   else if (emptyNum == 2)
+                                       scoreMapVec[row][col] += 90; // 活四
+                               }
+                               else if (botNum >= 5)
+                                   scoreMapVec[row][col] += 10000;   // 活五
+                           }
+                       }
+               }
+           }
+}
+
+bool GameModel::winorlose(int row, int col)        //简单判断输赢（六子连起来）
+{
+
+    int count = 0;                                //六子为赢，循环六次
+    int winflag = 1;                              //记录连续几颗棋子相连
+    int i, j;
+
+    for (i = row - 1, j = col ; i > 0 && count++ < 6; i--)    //竖向判断
+    {
+        if (gameMapVec[i][j] == gameMapVec[row][col])
+            winflag++;
+        else
+            break;
+    }
+    count = 0;
+    for (i = row+1 , j = col; i <= 21 && count++ < 6; i++)
+    {
+        if (gameMapVec[i][j] == gameMapVec[row][col])
+            winflag++;
+        else
+            break;
+    }
+    count = 0;
+    if (winflag >= 6)
+        return true;
+    else
+        winflag = 1;
+    for (i = row, j = col+1 ; j <= 21 && count++ < 6; j++)     //横向判断
+    {
+        if (gameMapVec[i][j] == gameMapVec[row][col])
+            winflag++;
+        else
+            break;
+    }
+    count = 0;
+    for (i = row, j = col - 1; j > 0 && count++ < 6; j--)
+    {
+        if (gameMapVec[i][j] == gameMapVec[row][col])
+            winflag++;
+        else
+            break;
+    }
+    count = 0;
+    if (winflag >= 6)
+        return true;
+    else
+        winflag = 1;
+    for (i = row+1 , j = col+1 ; i <= 21 && j <= 21 && count++ < 6; i++, j++)   //左斜方向判断
+    {
+        if (gameMapVec[i][j] == gameMapVec[row][col])
+            winflag++;
+        else
+            break;
+    }
+    count = 0;
+    for (i = row - 1, j = col - 1; i > 0 && j > 0 && count++ < 6; i--, j--)
+    {
+        if (gameMapVec[i][j] == gameMapVec[row][col])
+            winflag++;
+        else
+            break;
+    }
+    count = 0;
+    if (winflag >= 6)
+        return true;
+    else
+        winflag = 1;
+    for (i = row - 1, j = col+1 ; i > 0 && j <= 21 && count++ < 6; i--, j++)   //右斜方向判断
+    {
+        if (gameMapVec[i][j] == gameMapVec[row][col])
+            winflag++;
+        else
+            break;
+    }
+    count = 0;
+    for (i = row+1 , j = col - 1; i <= 21 && j > 0 && count++ < 6; i++, j--)
+    {
+        if (gameMapVec[i][j] == gameMapVec[row][col])
+            winflag++;
+        else
+            break;
+    }
+    count = 0;
+    if (winflag >= 6)
+        return true;
+    else
+        winflag = 1;
+    return false;
+}
+
+bool GameModel::heqi()
+{
+    // 所有空格全部填满
+    for (int i = 1; i < 21; i++)
+        for (int j = 1; j < 21; j++)
+        {
+            if (!(gameMapVec[i][j] == 1 || gameMapVec[i][j] == -1))
+                return false;
+        }
+    return true;
+}
