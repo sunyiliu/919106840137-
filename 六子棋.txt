@@ -1,118 +1,87 @@
-bool GameModel::nohands(int row,int col){
-    int count = 0;                                     //禁手最少四子相连，循环四次
-        int num(0);
-        int numm(0);//记录几个方向出现四子及以上相连
-        int winflag = 1;                                   //记录连续棋子相连个数
-        int i, j;
-        int cur;
-        cur=1;
-        for (i = row-1, j = col; i > 0 && count++ < 5; i--)   //竖向判断
-        {
-            if (gameMapVec[i][j] == cur)
-                winflag++;
-            else
-                break;
-        }
-        count = 0;
-        for (i = row+1, j = col; i <= 21 && count++ < 5; i++)
-        {
-            if (gameMapVec[i][j] == cur)
-                winflag++;
-            else
-                break;
-        }
-        count = 0;
-        if (winflag == 4 ) {
-            num++;                                    //出现则次数加一
-            winflag = 1;
-        }
-        else if(winflag==5){
-            numm++;
-            winflag=1;
-        }
+GameModel.h中
 
-        else
-            winflag = 1;
-        for (i = row, j = col+1; j <= 21 && count++ < 5; j++)    //横向判断
-        {
-            if (gameMapVec[i][j] == cur)
-                winflag++;
-            else
-                break;
+#include<vector>
+
+enum GameType
+{
+    PERSON,
+   AIII,
+    AIAI
+};
+// 游戏状态
+enum GameStatus
+{
+    PLAYING,
+    WIN,
+    DEAD
+};
+class GameModel
+{
+public:
+    GameModel(){};
+public:
+    std::vector<std::vector<int>> gameMapVec; // 存储当前游戏棋盘和棋子的情况,空白为0，白子1，黑子-1
+    std::vector<std::vector<int>> scoreMapVec; // 存储各个点位的评分情况，作为AI下棋依据
+    std::vector<std::vector<int>> scoreMapVec1; // 存储各个点位的评分情况，作为AI下棋依据
+    bool playerFlag; // 标示下棋方
+    GameType gameType; // 游戏模式
+    GameStatus gameStatus; // 游戏状态
+    void startGame(GameType type); // 开始游戏
+    void Person(int row, int col);    //人下棋
+    void AI(int &clickRow, int &clickCol);   //电脑下棋
+    void updataGameMap(int row,int col);     //更新棋盘
+    bool winorlose(int row, int col);       //判断输赢
+    bool heqi();                             //判断和棋
+    bool nohands(int row, int col);         //判断禁手
+    void computer();                     //电脑落子判断
+
+};
+
+
+GameModel.cpp中
+
+void GameModel::startGame(GameType type){
+    gameType = type;
+       // 初始棋盘
+       gameMapVec.clear();
+       for (int i = 0; i < 21; i++)
+       {
+           std::vector<int> lineBoard;
+           for (int j = 0; j < 21; j++)
+                 lineBoard.push_back(0);
+           gameMapVec.push_back(lineBoard);
+}
+       // 如果是AI模式，初始化评分数组
+          if (gameType == AIII)
+          {
+                    scoreMapVec.clear();
+              for (int i = 0; i < 21; i++)
+              {
+                 std::vector<int> lineScores;
+                  for (int j = 0; j < 21;j++);
+                  lineScores.push_back(0);
+                  scoreMapVec.push_back(lineScores);
+              }
+          }
+          //AIAI模式，初始化两个评分数组
+          else if(gameType == AIAI){
+              scoreMapVec.clear();
+              scoreMapVec1.clear();
+              for (int i = 0; i < 21; i++)
+              {
+                  std::vector<int> lineScores;
+                  for (int j = 0; j < 21;j++);
+                  lineScores.push_back(0);
+                  scoreMapVec.push_back(lineScores);
+                  scoreMapVec1.push_back(lineScores);
         }
-        count = 0;
-        for (i = row, j = col-1; j > 0 && count++ < 5; j--)
-        {
-            if (gameMapVec[i][j] == cur)
-                winflag++;
-            else
-                break;
-        }
-        count = 0;
-        if (winflag ==4) {
-            num++;
-            winflag = 1;
-        }
-        else if(winflag==5){
-            numm++;
-            winflag=1;
-        }
-        else
-            winflag = 1;
-        for (i = row+1, j = col+1; i <= 21 && j <= 21 && count++ < 5; i++, j++)
-        {
-            if (gameMapVec[i][j] == cur)
-                winflag++;
-            else
-                break;
-        }
-        count = 0;
-        for (i = row-1, j = col-1; i > 0 && j > 0 && count++ < 5; i--, j--)  //左斜判断
-        {
-            if (gameMapVec[i][j] == cur)
-                winflag++;
-            else
-                break;
-        }
-        count = 0;
-        if (winflag ==4) {
-            num++;
-            winflag = 1;
-        }
-        else if(winflag==5) {
-            numm++;
-            winflag=1;
-        }
-        else
-            winflag = 1;
-        for (i = row-1, j = col+1; i > 0 && j <= 21 && count++ < 5; i--, j++)   //右斜判断
-        {
-            if (gameMapVec[i][j] == cur)
-                winflag++;
-            else
-                break;
-        }
-        count = 0;
-        for (i = row+1, j = col-1; i <= 21 && j > 0 && count++ < 5; i++, j--)
-        {
-            if (gameMapVec[i][j] == cur)
-                winflag++;
-            else
-                break;
-        }
-        count = 0;
-        if (winflag ==4) {
-            num++;
-            winflag = 1;
-        }
-        else if(winflag==5){
-            numm++;
-            winflag=1;
-        }
-        else
-            winflag = 1;
-        if (num >= 2||numm>=2) return true;      //出现最少两个方向禁手，则返回白子胜利
-        else return false;
+          }
+          // 己方下为true,对方下位false
+          playerFlag = true;
+}
+
+void GameModel::Person(int row,int col){
+    updataGameMap(row,col);
 }
 
 void GameModel::AI(int &clickRow, int &clickCol)
@@ -146,6 +115,235 @@ void GameModel::AI(int &clickRow, int &clickCol)
     clickRow = pointPair.first; // 记录落子点
     clickCol = pointPair.second;
     updataGameMap(clickRow, clickCol);
+}
+
+void GameModel::updataGameMap(int row,int col){
+    if(playerFlag)
+        gameMapVec[row][col]=1;
+    else
+        gameMapVec[row][col]=-1;
+
+    //换手
+    playerFlag= !playerFlag;
+}
+
+bool GameModel::winorlose(int row, int col)        //简单判断输赢（六子连起来）
+{
+
+    int count = 0;                                //六子为赢，循环六次
+    int winflag = 1;                              //记录连续几颗棋子相连
+    int i, j;
+
+    for (i = row - 1, j = col ; i > 0 && count++ < 6; i--)    //竖向判断
+    {
+        if (gameMapVec[i][j] == gameMapVec[row][col])
+            winflag++;
+        else
+            break;
+    }
+    count = 0;
+    for (i = row+1 , j = col; i <= 21 && count++ < 6; i++)
+    {
+        if (gameMapVec[i][j] == gameMapVec[row][col])
+            winflag++;
+        else
+            break;
+    }
+    count = 0;
+    if (winflag >= 6)
+        return true;
+    else
+        winflag = 1;
+    for (i = row, j = col+1 ; j <= 21 && count++ < 6; j++)     //横向判断
+    {
+        if (gameMapVec[i][j] == gameMapVec[row][col])
+            winflag++;
+        else
+            break;
+    }
+    count = 0;
+    for (i = row, j = col - 1; j > 0 && count++ < 6; j--)
+    {
+        if (gameMapVec[i][j] == gameMapVec[row][col])
+            winflag++;
+        else
+            break;
+    }
+    count = 0;
+    if (winflag >= 6)
+        return true;
+    else
+        winflag = 1;
+    for (i = row+1 , j = col+1 ; i <= 21 && j <= 21 && count++ < 6; i++, j++)   //左斜方向判断
+    {
+        if (gameMapVec[i][j] == gameMapVec[row][col])
+            winflag++;
+        else
+            break;
+    }
+    count = 0;
+    for (i = row - 1, j = col - 1; i > 0 && j > 0 && count++ < 6; i--, j--)
+    {
+        if (gameMapVec[i][j] == gameMapVec[row][col])
+            winflag++;
+        else
+            break;
+    }
+    count = 0;
+    if (winflag >= 6)
+        return true;
+    else
+        winflag = 1;
+    for (i = row - 1, j = col+1 ; i > 0 && j <= 21 && count++ < 6; i--, j++)   //右斜方向判断
+    {
+        if (gameMapVec[i][j] == gameMapVec[row][col])
+            winflag++;
+        else
+            break;
+    }
+    count = 0;
+    for (i = row+1 , j = col - 1; i <= 21 && j > 0 && count++ < 6; i++, j--)
+    {
+        if (gameMapVec[i][j] == gameMapVec[row][col])
+            winflag++;
+        else
+            break;
+    }
+    count = 0;
+    if (winflag >= 6)
+        return true;
+    else
+        winflag = 1;
+    return false;
+}
+
+bool GameModel::heqi()
+{
+    // 所有空格全部填满
+    for (int i = 1; i < 21; i++)
+        for (int j = 1; j < 21; j++)
+        {
+            if (!(gameMapVec[i][j] == 1 || gameMapVec[i][j] == -1))
+                return false;
+        }
+    return true;
+}
+
+bool GameModel::nohands(int row,int col){
+    int count = 0;                                     //禁手最少四子相连，循环四次
+        int num(0);
+        int numm(0);//记录几个方向出现四子及以上相连
+        int winflag = 1;                                   //记录连续棋子相连个数
+        int i, j;
+        int cur;
+        cur=1;
+        for (i = row-1, j = col; i > 0 && count++ < 5; i--)   //竖向判断
+        {
+            if (gameMapVec[i][j] == cur)
+                winflag++;
+            else
+                break;
+        }
+        count = 0;
+        for (i = row+1, j = col; i < 21 && count++ < 5; i++)
+        {
+            if (gameMapVec[i][j] == cur)
+                winflag++;
+            else
+                break;
+        }
+        count = 0;
+        if (winflag == 4 ) {
+            num++;                                    //出现则次数加一
+            winflag = 1;
+        }
+        else if(winflag==5){
+            numm++;
+            winflag=1;
+        }
+
+        else
+            winflag = 1;
+        for (i = row, j = col+1; j < 21 && count++ < 5; j++)    //横向判断
+        {
+            if (gameMapVec[i][j] == cur)
+                winflag++;
+            else
+                break;
+        }
+        count = 0;
+        for (i = row, j = col-1; j > 0 && count++ < 5; j--)
+        {
+            if (gameMapVec[i][j] == cur)
+                winflag++;
+            else
+                break;
+        }
+        count = 0;
+        if (winflag ==4) {
+            num++;
+            winflag = 1;
+        }
+        else if(winflag==5){
+            numm++;
+            winflag=1;
+        }
+        else
+            winflag = 1;
+        for (i = row+1, j = col+1; i < 21 && j < 21 && count++ < 5; i++, j++)
+        {
+            if (gameMapVec[i][j] == cur)
+                winflag++;
+            else
+                break;
+        }
+        count = 0;
+        for (i = row-1, j = col-1; i > 0 && j > 0 && count++ < 5; i--, j--)  //左斜判断
+        {
+            if (gameMapVec[i][j] == cur)
+                winflag++;
+            else
+                break;
+        }
+        count = 0;
+        if (winflag ==4) {
+            num++;
+            winflag = 1;
+        }
+        else if(winflag==5) {
+            numm++;
+            winflag=1;
+        }
+        else
+            winflag = 1;
+        for (i = row-1, j = col+1; i > 0 && j < 21 && count++ < 5; i--, j++)   //右斜判断
+        {
+            if (gameMapVec[i][j] == cur)
+                winflag++;
+            else
+                break;
+        }
+        count = 0;
+        for (i = row+1, j = col-1; i < 21 && j > 0 && count++ < 5; i++, j--)
+        {
+            if (gameMapVec[i][j] == cur)
+                winflag++;
+            else
+                break;
+        }
+        count = 0;
+        if (winflag ==4) {
+            num++;
+            winflag = 1;
+        }
+        else if(winflag==5){
+            numm++;
+            winflag=1;
+        }
+        else
+            winflag = 1;
+        if (num >= 2||numm>=2) return true;      //出现最少两个方向禁手，则返回白子胜利
+        else return false;
 }
 
 void GameModel::computer(){
@@ -309,104 +507,57 @@ void GameModel::computer(){
            }
 }
 
-bool GameModel::winorlose(int row, int col)        //简单判断输赢（六子连起来）
-{
+MainScene.h中
 
-    int count = 0;                                //六子为赢，循环六次
-    int winflag = 1;                              //记录连续几颗棋子相连
-    int i, j;
-
-    for (i = row - 1, j = col ; i > 0 && count++ < 6; i--)    //竖向判断
-    {
-        if (gameMapVec[i][j] == gameMapVec[row][col])
-            winflag++;
-        else
-            break;
-    }
-    count = 0;
-    for (i = row+1 , j = col; i <= 21 && count++ < 6; i++)
-    {
-        if (gameMapVec[i][j] == gameMapVec[row][col])
-            winflag++;
-        else
-            break;
-    }
-    count = 0;
-    if (winflag >= 6)
-        return true;
-    else
-        winflag = 1;
-    for (i = row, j = col+1 ; j <= 21 && count++ < 6; j++)     //横向判断
-    {
-        if (gameMapVec[i][j] == gameMapVec[row][col])
-            winflag++;
-        else
-            break;
-    }
-    count = 0;
-    for (i = row, j = col - 1; j > 0 && count++ < 6; j--)
-    {
-        if (gameMapVec[i][j] == gameMapVec[row][col])
-            winflag++;
-        else
-            break;
-    }
-    count = 0;
-    if (winflag >= 6)
-        return true;
-    else
-        winflag = 1;
-    for (i = row+1 , j = col+1 ; i <= 21 && j <= 21 && count++ < 6; i++, j++)   //左斜方向判断
-    {
-        if (gameMapVec[i][j] == gameMapVec[row][col])
-            winflag++;
-        else
-            break;
-    }
-    count = 0;
-    for (i = row - 1, j = col - 1; i > 0 && j > 0 && count++ < 6; i--, j--)
-    {
-        if (gameMapVec[i][j] == gameMapVec[row][col])
-            winflag++;
-        else
-            break;
-    }
-    count = 0;
-    if (winflag >= 6)
-        return true;
-    else
-        winflag = 1;
-    for (i = row - 1, j = col+1 ; i > 0 && j <= 21 && count++ < 6; i--, j++)   //右斜方向判断
-    {
-        if (gameMapVec[i][j] == gameMapVec[row][col])
-            winflag++;
-        else
-            break;
-    }
-    count = 0;
-    for (i = row+1 , j = col - 1; i <= 21 && j > 0 && count++ < 6; i++, j--)
-    {
-        if (gameMapVec[i][j] == gameMapVec[row][col])
-            winflag++;
-        else
-            break;
-    }
-    count = 0;
-    if (winflag >= 6)
-        return true;
-    else
-        winflag = 1;
-    return false;
+#include <QMainWindow>
+namespace Ui {
+class MainScene;
 }
 
-bool GameModel::heqi()
+class MainScene : public QMainWindow
 {
-    // 所有空格全部填满
-    for (int i = 1; i < 21; i++)
-        for (int j = 1; j < 21; j++)
-        {
-            if (!(gameMapVec[i][j] == 1 || gameMapVec[i][j] == -1))
-                return false;
-        }
-    return true;
+    Q_OBJECT
+
+public:
+    explicit MainScene(QWidget *parent = 0);
+    ~MainScene();
+
+    //重新画背景图
+    void paintEvent(QPaintEvent *);
+
+private:
+    Ui::MainScene *ui;
+};
+
+
+MainScene.cpp中
+
+MainScene::MainScene(QWidget *parent) :
+    QMainWindow(parent),
+    ui(new Ui::MainScene)
+{
+    ui->setupUi(this);
+    //设置固定大小
+    this->setFixedSize(916,1293);
+    //设置图标
+    this->setWindowIcon(QPixmap(":/new/prefix1/res/8.jpg"));
+    //设置标题
+    this->setWindowTitle("快乐六子棋");
+    //退出按钮
+    connect(ui->actionfail,&QAction::triggered,[=](){
+        this->close();
+    });
 }
+
+void MainScene::paintEvent(QPaintEvent *){
+    //创建画家，制定绘图设备
+    QPainter painter(this);
+    //创建QPixmap对象
+    QPixmap pix;
+    //加载图片
+    pix.load(":/new/prefix1/res/4.jpg");
+    //绘制背景图
+    painter.drawPixmap(0,0,this->width(),this->height(),pix);
+}
+
+
