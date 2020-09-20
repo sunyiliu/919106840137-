@@ -15,8 +15,22 @@ class serverwidget : public QWidget
     Q_OBJECT
 public:
     explicit serverwidget(QWidget *parent = 0);
+    //重新画背景图
+    void paintEvent(QPaintEvent *);
+    GameModel *game;//游戏指针
+    GameType game_type;//存储游戏类型
+       int clickPosRow,clickPosCol;    //存储将点击的位置
+           bool selectPos = false;     //是否移动到合适的位置，以选中某个交叉点
+           int posrow,poscol;
+    void initGame();
+    void chessOneByPerson();
+     void initPVPGame();
+     void mouseMoveEvent(QMouseEvent *event);
+     void mouseReleaseEvent(QMouseEvent *event);
     ~serverwidget();
 signals:
+     //自定义信号 点击返回
+    void chooseSceneBack();
 private slots:
      void on_buttonclose_clicked();
 private:
@@ -27,11 +41,19 @@ private:
 
 serverwidget.cpp中
 #include<QMenuBar>
+#include<QPainter>
+#include"mypushbutton.h"
+#include<QTimer>
+#include"gamemodel.h"
+#include<QMessageBox>
+#include<QMouseEvent>
 serverwidget::serverwidget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::serverwidget)
 {
     ui->setupUi(this);
+    setMouseTracking(true);
+
     //监听套接字，指定父对象（this），让其自动回收空间
     tcpServer= new QTcpServer(this);
     tcpServer->listen(QHostAddress::Any,8888);           //监听
@@ -41,12 +63,46 @@ serverwidget::serverwidget(QWidget *parent) :
         qint16 port=tcpSocket->peerPort();                //获取client的窗口信息
         QString temp=QString("[%1:%2]:成功连接").arg(ip).arg(port); //连接信息显示格式
         ui->textEdit->setText(temp);           //放在文本框里
+        connect(tcpSocket,&QTcpSocket::readyRead,[=](){
+            for(int i=1;i<21;i++){
+                for(int j=1;j<21;j++){
+                    if(game->gameMapVec[i][j]==2)   game->gameMapVec[i][j]=0;
+                }
+            }
+            QByteArray array= tcpSocket->readAll();      //取出文本框所有的内容
+            ui->textEdit_2->append(array);              //输出内容
+            game->gameMapVec[array[0]-'a'+1][array[1]-'a'+1]=shunxu;
+            update();
+        });
     });
     this->setFixedSize(1406,1200);
       //设置图标
       this->setWindowIcon(QPixmap(":/new/prefix1/res/8.jpg"));
       //设置标题
       this->setWindowTitle("联机模式(server端)");
+    //返回按钮
+    MyPushButton *backBtn = new MyPushButton(":/new/prefix1/res/17.jpg",":/new/prefix1/res/18.jpg");
+    backBtn->setParent(this);
+    backBtn->move(1300,981);
+    //点击返回
+    connect(backBtn,&MyPushButton::clicked,[=](){
+        if(QMessageBox::Yes == QMessageBox::question(this,"question","确定要退出吗？",QMessageBox::Yes|QMessageBox::No,QMessageBox::No)){
+            for(int i=1;i<21;i++){
+                for(int j=1;j<21;j++){
+                    game->gameMapVec[i][j]=0;
+                }
+            }
+            posrow=0;
+            poscol=0;
+            game->playerFlag=true;
+            //延迟返回
+            QTimer::singleShot(400,this,[=](){
+                //返回主场景
+                 emit this->chooseSceneBack();
+            });
+                }
+    });
+    initGame();
 }
 void serverwidget::paintEvent(QPaintEvent *){
     //创建画家，制定绘图设备
@@ -57,6 +113,217 @@ void serverwidget::paintEvent(QPaintEvent *){
     pix.load(":/new/prefix1/res/1001.jpg");
     //绘制背景图
     painter.drawPixmap(0,0,this->width(),this->height(),pix);
+    painter.setRenderHint(QPainter::Antialiasing,true);
+    for(int i=0;i<22;i++){
+        //从左到右竖线
+        painter.drawLine(55+52*i,55,55+52*i,1146);
+        //从上到下横线
+        painter.drawLine(55,55+52*i,1146,55+52*i);
+    }
+    QBrush brush;
+        brush.setStyle(Qt::SolidPattern);
+        // 绘制落子标记(防止鼠标出框越界)
+        if (clickPosRow > 0 && clickPosRow < 21 &&
+            clickPosCol > 0 && clickPosCol < 21 &&
+            game->gameMapVec[clickPosRow][clickPosCol] == 0)
+        {
+                brush.setColor(Qt::black);
+            painter.setBrush(brush);
+            painter.drawRect(55 + 52 * clickPosCol - 6 / 2, 55 + 52 * clickPosRow - 6 / 2, 6, 6);
+        }
+    //绘制棋子
+    for(int i=1;i<21;i++){
+        for(int j=1;j<21;j++){
+            if(game->gameMapVec[i][j]==1){
+                brush.setColor(Qt::black);
+                painter.setBrush(brush);
+                painter.drawEllipse(55+52*j-20,55+52*i-20,40,40);
+            }
+            else if(game->gameMapVec[i][j]==-1){
+                brush.setColor(Qt::white);
+                painter.setBrush(brush);
+                painter.drawEllipse(55+52*j-20,55+52*i-20,40,40);
+            }
+        }
+    }
+    if (clickPosRow > 0 && clickPosRow < 21 &&
+                clickPosCol > 0 && clickPosCol < 21 &&
+           (game->gameMapVec[clickPosRow][clickPosCol] == 1 ||
+                    game->gameMapVec[clickPosRow][clickPosCol] == -1))
+       {
+           if (game->jjwin() && game->gameStatus == PLAYING)
+           {
+                    // qDebug() << "win";
+               for(int i=0;i<21;i++){
+                           for(int j=0;j<21;j++){
+                               if(game->gameMapVec[i][j]==0)
+                               game->gameMapVec[i][j]=2;
+                           }
+                       }
+               game->gameStatus = WIN;
+               QString str;
+               if (game->winorlose(posrow,poscol))
+                   str = "黑棋获胜";
+               else 
+                   str = "白棋获胜";
+               QMessageBox::StandardButton btnValue = QMessageBox::information(this, "恭喜", str );
+               // 重置游戏状态，否则容易死循环
+               if (btnValue == QMessageBox::Ok)
+               {
+                        game->startGame(game_type);
+                   game->gameStatus = PLAYING;
+                   if(shunxu==-1){
+                       for(int i=1;i<21;i++){
+                           for(int j=1;j<21;j++){
+                               game->gameMapVec[i][j]=2;
+                           }
+                       }
+                   }
+               }
+           }
+           else if (game->heqi())
+               {
+                   QMessageBox::StandardButton btnValue = QMessageBox::information(this, "啊偶", "和棋了");
+                   if (btnValue == QMessageBox::Ok)
+                   {
+                       game->startGame(game_type);
+                       game->gameStatus = PLAYING;
+                       if(shunxu==-1){
+                           for(int i=1;i<21;i++){
+                               for(int j=1;j<21;j++){
+                                   game->gameMapVec[i][j]=2;
+                               }
+                           }
+                       }
+                   }
+               }
+           else if (game->playerFlag&& game->nohands(clickPosRow,clickPosCol)){
+               for(int i=0;i<21;i++){
+                           for(int j=0;j<21;j++){
+                               if(game->gameMapVec[i][j]==0)
+                               game->gameMapVec[i][j]=2;
+                           }
+                       }
+               game->gameStatus = WIN;
+               QMessageBox::StandardButton btnValue = QMessageBox::information(this, "恭喜", "白棋获胜" );
+               if (btnValue == QMessageBox::Ok)
+               {
+                        game->startGame(game_type);
+                   game->gameStatus = PLAYING;
+                   if(shunxu==-1){
+                       for(int i=1;i<21;i++){
+                           for(int j=1;j<21;j++){
+                               game->gameMapVec[i][j]=2;
+                           }
+                       }
+                   }
+               }
+           }
+       }
+}
+void serverwidget::initGame(){
+    game = new GameModel;//初始化游戏模型
+    initPVPGame();
+}
+void serverwidget::initPVPGame(){
+    game_type = PERSON;
+    game->gameStatus = PLAYING;
+    game->startGame(game_type);
+    update();
+}
+void serverwidget::mouseMoveEvent(QMouseEvent *event)
+{
+    // 通过鼠标的hover确定落子的标记
+    int x = event->x();
+    int y = event->y();
+    // 棋盘边缘不能落子
+    if (x >= 55 +26&&
+            x < 1121 &&
+            y >= 55+26 &&
+            y < 1121)
+    {
+        // 获取最近的左上角的点
+        int col = (x-55) / 52;
+        int row = (y-55) / 52;
+        int leftTopPosX = 55 + 52 * col;
+        int leftTopPosY = 55 + 52 * row;
+        // 根据距离算出合适的点击位置,一共四个点，根据半径距离选最近的
+        clickPosRow = -1; // 初始化最终的值
+        clickPosCol = -1;
+        int len = 0; // 计算完后取整就可以了
+        selectPos =false;
+        // 确定一个误差在范围内的点，且只可能确定一个出来
+        len = sqrt((x - leftTopPosX) * (x - leftTopPosX) + (y - leftTopPosY) * (y - leftTopPosY));
+        if (len < 20)
+        {
+            clickPosRow = row;
+            clickPosCol = col;
+            if(game->gameMapVec[clickPosRow][clickPosCol]==0){
+                selectPos = true;
+            }
+        }
+        len = sqrt((x - leftTopPosX - 52) * (x - leftTopPosX - 52) + (y - leftTopPosY) * (y - leftTopPosY));
+        if (len < 20)
+        {
+            clickPosRow = row;
+            clickPosCol = col + 1;
+            if(game->gameMapVec[clickPosRow][clickPosCol]==0){
+                selectPos = true;
+            }
+        }
+        len = sqrt((x - leftTopPosX) * (x - leftTopPosX) + (y - leftTopPosY - 52) * (y - leftTopPosY - 52));
+        if (len < 20)
+        {
+            clickPosRow = row + 1;
+            clickPosCol = col;
+            if(game->gameMapVec[clickPosRow][clickPosCol]==0){
+                selectPos = true;
+            }
+        }
+        len = sqrt((x - leftTopPosX - 52) * (x - leftTopPosX - 52) + (y - leftTopPosY - 52) * (y - leftTopPosY - 52));
+        if (len < 20)
+        {
+            clickPosRow = row + 1;
+            clickPosCol = col + 1;
+            if(game->gameMapVec[clickPosRow][clickPosCol]==0){
+                selectPos = true;
+            }
+        }
+    }
+    // 存了坐标后也要重绘
+    update();
+}
+void serverwidget::mouseReleaseEvent(QMouseEvent *event){
+    if(selectPos == false ){
+        return ;
+    }
+    else{
+        selectPos =false;
+    }
+    chessOneByPerson();
+}
+void serverwidget::chessOneByPerson(){
+    //根据当前存储的坐标落子
+    //只有有效点击才下子，并且该处没有子
+    if(clickPosRow !=-1&&clickPosCol!=-1&&game->gameMapVec[clickPosRow][clickPosCol]==0){
+        QString str ;
+        str[0]= clickPosRow+96;     //int转化成QString
+        str[1]= clickPosCol+96;
+        tcpSocket->write(str.toUtf8().data());   //给client发送数据，使用套接字tcpSocket
+        posrow= clickPosRow;
+        poscol= clickPosCol;
+        game->Person(clickPosRow,clickPosCol);
+        game->iswin+=1;
+        ui->textEdit_2->clear();                      //清空文本框的内容
+        game->playerFlag=!game->playerFlag;
+        for(int i=1;i<21;i++){
+            for(int j=1;j<21;j++){
+                if(game->gameMapVec[i][j]==0)   game->gameMapVec[i][j]=2;
+            }
+        }
+        //重绘
+        update();
+    }
 }
 serverwidget::~serverwidget()
 {
@@ -68,6 +335,7 @@ void serverwidget::on_buttonclose_clicked()
     tcpSocket->close();
 }
 
+
 clientwidget.h中
 #include <QWidget>
 #include<QTcpSocket>       //通信套接字
@@ -75,22 +343,45 @@ clientwidget.h中
 namespace Ui {
 class clientwidget;
 }
+
 class clientwidget : public QWidget
 {
     Q_OBJECT
+
 public:
     explicit clientwidget(QWidget *parent = 0);
+    //重新画背景图
+    void paintEvent(QPaintEvent *);
+    void initGame();
+        GameModel *game;//游戏指针
+            GameType game_type;//存储游戏类型
+                void initPVPGame();
+                 void chessOneByPerson();
+                   bool selectPos = false;     //是否移动到合适的位置，以选中某个交叉点
+                   void mouseMoveEvent(QMouseEvent *event);
+                   void mouseReleaseEvent(QMouseEvent *event);
+    int clickPosRow,clickPosCol;    //存储将点击的位置
     ~clientwidget();
 signals:
+     //自定义信号 点击返回
+    void chooseSceneBack();
 private slots:
+    void on_buttonConnect_clicked();
 private:
     Ui::clientwidget *ui;
     QTcpSocket *tcpSocket;
 };
 
+
 clientwidget.cpp中
 #include<QHostAddress>
 #include<QMenuBar>
+#include<QPainter>
+#include"mypushbutton.h"
+#include"gamemodel.h"
+#include<QMessageBox>
+#include<QMouseEvent>
+#include<QTimer>
 clientwidget::clientwidget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::clientwidget)
@@ -101,12 +392,46 @@ clientwidget::clientwidget(QWidget *parent) :
     tcpSocket=new QTcpSocket(this);
     connect(tcpSocket,&QTcpSocket::connected,[=](){
         ui->textEdit_2->setText("成功和服务器连接");
+        connect(tcpSocket,&QTcpSocket::readyRead,[=](){
+            //获取对方发送的内容
+            QByteArray array = tcpSocket->readAll();
+            //放到文本中
+            for(int i=1;i<21;i++){
+                for(int j=1;j<21;j++){
+                    if(game->gameMapVec[i][j]==2)   game->gameMapVec[i][j]=0;
+                }
+            }
+            ui->textEdit->append(array);
+            game->gameMapVec[array[0]-'a'+1][array[1]-'a'+1]=shunxu;
+            update();
+        });
     });
     this->setFixedSize(1406,1200);
       //设置图标
       this->setWindowIcon(QPixmap(":/new/prefix1/res/8.jpg"));
       //设置标题
       this->setWindowTitle("联机模式(client端)");
+    //返回按钮
+    MyPushButton *backBtn = new MyPushButton(":/new/prefix1/res/17.jpg",":/new/prefix1/res/18.jpg");
+    backBtn->setParent(this);
+    backBtn->move(1300,981);
+    //点击返回
+    connect(backBtn,&MyPushButton::clicked,[=](){
+        if(QMessageBox::Yes == QMessageBox::question(this,"question","确定要退出吗？",QMessageBox::Yes|QMessageBox::No,QMessageBox::No)){
+            for(int i=1;i<21;i++){
+                for(int j=1;j<21;j++){
+                    game->gameMapVec[i][j]=0;
+                }
+            }
+            game->playerFlag=true;
+            //延迟返回
+            QTimer::singleShot(400,this,[=](){
+                //返回主场景
+                 emit this->chooseSceneBack();
+            });
+                }
+    });
+    initGame();
 }
 void clientwidget::paintEvent(QPaintEvent *){
     //创建画家，制定绘图设备
@@ -117,6 +442,114 @@ void clientwidget::paintEvent(QPaintEvent *){
     pix.load(":/new/prefix1/res/1001.jpg");
     //绘制背景图
     painter.drawPixmap(0,0,this->width(),this->height(),pix);
+    painter.setRenderHint(QPainter::Antialiasing,true);
+    for(int i=0;i<22;i++){
+        //从左到右竖线
+        painter.drawLine(55+52*i,55,55+52*i,1146);
+        //从上到下横线
+        painter.drawLine(55,55+52*i,1146,55+52*i);
+    }
+    QBrush brush;
+        brush.setStyle(Qt::SolidPattern);
+        if (clickPosRow > 0 && clickPosRow < 21 &&
+            clickPosCol > 0 && clickPosCol < 21 &&
+            game->gameMapVec[clickPosRow][clickPosCol] == 0)
+        {
+                brush.setColor(Qt::white);
+            painter.setBrush(brush);
+            painter.drawRect(55 + 52 * clickPosCol - 6 / 2, 55 + 52 * clickPosRow - 6 / 2, 6, 6);
+        }
+    //绘制棋子
+    for(int i=1;i<21;i++){
+        for(int j=1;j<21;j++){
+            if(game->gameMapVec[i][j]==1){
+                brush.setColor(Qt::black);
+                painter.setBrush(brush);
+                painter.drawEllipse(55+52*j-20,55+52*i-20,40,40);
+            }
+            else if(game->gameMapVec[i][j]==-1){
+                brush.setColor(Qt::white);
+                painter.setBrush(brush);
+                painter.drawEllipse(55+52*j-20,55+52*i-20,40,40);
+            }
+        }
+    }
+    if (clickPosRow > 0 && clickPosRow < 21 &&
+                clickPosCol > 0 && clickPosCol < 21 &&
+           (game->gameMapVec[clickPosRow][clickPosCol] == 1 ||
+                    game->gameMapVec[clickPosRow][clickPosCol] == -1))
+       {
+           if (game->jjwin() && game->gameStatus == PLAYING)
+           {
+                    // qDebug() << "win";
+               for(int i=0;i<21;i++){
+                           for(int j=0;j<21;j++){
+                               if(game->gameMapVec[i][j]==0)
+                               game->gameMapVec[i][j]=2;
+                           }
+                       }
+               game->gameStatus = WIN;
+               QString str;
+               if (game->iswin%2==1)
+                   str = "黑棋获胜";
+               else 
+                   str = "白棋获胜";
+               QMessageBox::StandardButton btnValue = QMessageBox::information(this, "恭喜", str );
+               // 重置游戏状态，否则容易死循环
+               if (btnValue == QMessageBox::Ok)
+               {
+                        game->startGame(game_type);
+                   game->gameStatus = PLAYING;
+                   if(shunxu==-1){
+                       for(int i=1;i<21;i++){
+                           for(int j=1;j<21;j++){
+                               game->gameMapVec[i][j]=2;
+                           }
+                       }
+                   }
+
+               }
+           }
+           else if (game->heqi())
+               {
+                   QMessageBox::StandardButton btnValue = QMessageBox::information(this, "啊偶", "和棋了");
+                   if (btnValue == QMessageBox::Ok)
+                   {
+                       game->startGame(game_type);
+                       game->gameStatus = PLAYING;
+                       if(shunxu==-1){
+                           for(int i=1;i<21;i++){
+                               for(int j=1;j<21;j++){
+                                   game->gameMapVec[i][j]=2;
+                               }
+                           }
+                       }
+                   }
+               }
+           else if (game->playerFlag&& game->nohands(clickPosRow,clickPosCol)){
+               for(int i=0;i<21;i++){
+                           for(int j=0;j<21;j++){
+                               if(game->gameMapVec[i][j]==0)
+                               game->gameMapVec[i][j]=2;
+                           }
+                       }
+               game->gameStatus = WIN;
+               QMessageBox::StandardButton btnValue = QMessageBox::information(this, "恭喜", "白棋获胜" );
+               if (btnValue == QMessageBox::Ok)
+               {
+                        game->startGame(game_type);
+                   game->gameStatus = PLAYING;
+                   if(shunxu==-1){
+                       for(int i=1;i<21;i++){
+                           for(int j=1;j<21;j++){
+                               game->gameMapVec[i][j]=2;
+                           }
+                       }
+                   }
+               }
+           }
+
+       }
 }
 clientwidget::~clientwidget()
 {
@@ -128,4 +561,106 @@ void clientwidget::on_buttonConnect_clicked()
     qint16 port = ui->lineEditPort->text().toInt();    //获取输入的窗口
     tcpSocket->connectToHost(QHostAddress(ip),port);    //建立连接
 }
-
+void clientwidget::mouseMoveEvent(QMouseEvent *event)
+{
+    // 通过鼠标的hover确定落子的标记
+    int x = event->x();
+    int y = event->y();
+    // 棋盘边缘不能落子
+    if (x >= 55 +26&&
+            x < 1121 &&
+            y >= 55+26 &&
+            y < 1121)
+    {
+        // 获取最近的左上角的点
+        int col = (x-55) / 52;
+        int row = (y-55) / 52;
+        int leftTopPosX = 55 + 52 * col;
+        int leftTopPosY = 55 + 52 * row;
+        // 根据距离算出合适的点击位置,一共四个点，根据半径距离选最近的
+        clickPosRow = -1; // 初始化最终的值
+        clickPosCol = -1;
+        int len = 0; // 计算完后取整就可以了
+        selectPos =false;
+        // 确定一个误差在范围内的点，且只可能确定一个出来
+        len = sqrt((x - leftTopPosX) * (x - leftTopPosX) + (y - leftTopPosY) * (y - leftTopPosY));
+        if (len < 20)
+        {
+            clickPosRow = row;
+            clickPosCol = col;
+            if(game->gameMapVec[clickPosRow][clickPosCol]==0){
+                selectPos = true;
+            }
+        }
+        len = sqrt((x - leftTopPosX - 52) * (x - leftTopPosX - 52) + (y - leftTopPosY) * (y - leftTopPosY));
+        if (len < 20)
+        {
+            clickPosRow = row;
+            clickPosCol = col + 1;
+            if(game->gameMapVec[clickPosRow][clickPosCol]==0){
+                selectPos = true;
+            }
+        }
+        len = sqrt((x - leftTopPosX) * (x - leftTopPosX) + (y - leftTopPosY - 52) * (y - leftTopPosY - 52));
+        if (len < 20)
+        {
+            clickPosRow = row + 1;
+            clickPosCol = col;
+            if(game->gameMapVec[clickPosRow][clickPosCol]==0){
+                selectPos = true;
+            }
+        }
+        len = sqrt((x - leftTopPosX - 52) * (x - leftTopPosX - 52) + (y - leftTopPosY - 52) * (y - leftTopPosY - 52));
+        if (len < 20)
+        {
+            clickPosRow = row + 1;
+            clickPosCol = col + 1;
+            if(game->gameMapVec[clickPosRow][clickPosCol]==0){
+                selectPos = true;
+            }
+        }
+    }
+    // 存了坐标后也要重绘
+    update();
+}
+void clientwidget::mouseReleaseEvent(QMouseEvent *event){
+    if(selectPos == false ){
+        return ;
+    }
+    else{
+        selectPos =false;
+    }
+    chessOneByPerson();
+}
+void clientwidget::initGame(){
+    game = new GameModel;//初始化游戏模型
+    initPVPGame();
+}
+void clientwidget::initPVPGame()
+        {
+            game_type = PERSON;
+            game->gameStatus = PLAYING;
+            game->startGame(game_type);
+            update();
+}
+void clientwidget::chessOneByPerson(){
+    //根据当前存储的坐标落子
+    //只有有效点击才下子，并且该处没有子
+    if(clickPosRow !=-1&&clickPosCol!=-1&&game->gameMapVec[clickPosRow][clickPosCol]==0){
+        QString str ;
+        str[0]= clickPosRow+96;
+        str[1]= clickPosCol+96;
+        tcpSocket->write(str.toUtf8().data());           //给server发送数据
+        game->iswin+=1;
+        ui->textEdit->clear();
+        game->playerFlag=!game->playerFlag;
+        game->Person(clickPosRow,clickPosCol);
+        //重绘
+        for(int i=1;i<21;i++){
+            for(int j=1;j<21;j++){
+                if(game->gameMapVec[i][j]==0)   game->gameMapVec[i][j]=2;
+            }
+        }
+        update();
+    }
+}
