@@ -1,3 +1,125 @@
+GameModel.cpp中添加
+bool GameModel::nohandss(){
+    int count = 0;                                     //禁手最少四子相连，循环四次
+        int winflag = 1;                                   //记录连续棋子相连个数
+        int i, j;
+        int cur;
+        cur=1;
+        for(int row=1;row<21;row++){
+            for(int col=1;col<21;col++){
+                if(gameMapVec[row][col]!=1) continue;
+                int num(0);
+                int numm(0);                 //记录几个方向出现四子及以上相连
+                for (i = row-1, j = col; i > 0 && count++ < 5; i--)   //竖向判断
+                {
+                    if (gameMapVec[i][j] == cur)
+                        winflag++;
+                    else
+                        break;
+                }
+                count = 0;
+                for (i = row+1, j = col; i < 21 && count++ < 5; i++)
+                {
+                    if (gameMapVec[i][j] == cur)
+                        winflag++;
+                    else
+                        break;
+                }
+                count = 0;
+                if (winflag == 4 ) {
+                    num++;                                    //出现则次数加一
+                    winflag = 1;
+                }
+                else if(winflag==5){
+                    numm++;
+                    winflag=1;
+                }
+                else
+                    winflag = 1;
+                for (i = row, j = col+1; j < 21 && count++ < 5; j++)    //横向判断
+                {
+                    if (gameMapVec[i][j] == cur)
+                        winflag++;
+                    else
+                        break;
+                }
+                count = 0;
+                for (i = row, j = col-1; j > 0 && count++ < 5; j--)
+                {
+                    if (gameMapVec[i][j] == cur)
+                        winflag++;
+                    else
+                        break;
+                }
+                count = 0;
+                if (winflag ==4) {
+                    num++;
+                    winflag = 1;
+                }
+                else if(winflag==5){
+                    numm++;
+                    winflag=1;
+                }
+                else
+                    winflag = 1;
+                for (i = row+1, j = col+1; i < 21 && j < 21 && count++ < 5; i++, j++)
+                {
+                    if (gameMapVec[i][j] == cur)
+                        winflag++;
+                    else
+                        break;
+                }
+                count = 0;
+                for (i = row-1, j = col-1; i > 0 && j > 0 && count++ < 5; i--, j--)  //左斜判断
+                {
+                    if (gameMapVec[i][j] == cur)
+                        winflag++;
+                    else
+                        break;
+                }
+                count = 0;
+                if (winflag ==4) {
+                    num++;
+                    winflag = 1;
+                }
+                else if(winflag==5) {
+                    numm++;
+                    winflag=1;
+                }
+                else
+                    winflag = 1;
+                for (i = row-1, j = col+1; i > 0 && j < 21 && count++ < 5; i--, j++)   //右斜判断
+                {
+                    if (gameMapVec[i][j] == cur)
+                        winflag++;
+                    else
+                        break;
+                }
+                count = 0;
+                for (i = row+1, j = col-1; i < 21 && j > 0 && count++ < 5; i++, j--)
+                {
+                    if (gameMapVec[i][j] == cur)
+                        winflag++;
+                    else
+                        break;
+                }
+                count = 0;
+                if (winflag ==4) {
+                    num++;
+                    winflag = 1;
+                }
+                else if(winflag==5){
+                    numm++;
+                    winflag=1;
+                }
+                else
+                    winflag = 1;
+                if (num >= 2||numm>=2) return true;      //出现最少两个方向禁手，则返回白子胜利
+            }
+        }
+        return false;
+}
+
 serverwidget.cpp中
 #include<QMenuBar>
 #include<QPainter>
@@ -154,7 +276,7 @@ void serverwidget::paintEvent(QPaintEvent *){
                    else shunxu=1;
                }
            }
-           else if (game->heqi())
+           else if (game->heqi()&& game->gameStatus == PLAYING)
                {
                    QMessageBox::StandardButton btnValue = QMessageBox::information(this, "啊偶", "和棋了");
                    if (btnValue == QMessageBox::Ok)
@@ -173,7 +295,7 @@ void serverwidget::paintEvent(QPaintEvent *){
                        else shunxu=1;
                    }
                }
-           else if (game->playerFlag&& game->nohands(clickPosRow,clickPosCol)){
+           else if (game->nohandss() && game->gameStatus == PLAYING){
                for(int i=0;i<21;i++){
                            for(int j=0;j<21;j++){
                                if(game->gameMapVec[i][j]==0)
@@ -484,7 +606,7 @@ void clientwidget::paintEvent(QPaintEvent *){
 
                }
            }
-           else if (game->heqi())
+           else if (game->heqi() && game->gameStatus == PLAYING)
                {
                    QMessageBox::StandardButton btnValue = QMessageBox::information(this, "啊偶", "和棋了");
                    if (btnValue == QMessageBox::Ok)
@@ -503,7 +625,7 @@ void clientwidget::paintEvent(QPaintEvent *){
                        else shunxu=1;
                    }
                }
-           else if (game->playerFlag&& game->nohands(clickPosRow,clickPosCol)){
+           else if (game->nohandss() && game->gameStatus == PLAYING){
                for(int i=0;i<21;i++){
                            for(int j=0;j<21;j++){
                                if(game->gameMapVec[i][j]==0)
